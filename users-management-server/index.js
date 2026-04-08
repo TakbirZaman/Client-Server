@@ -3,6 +3,8 @@ const app = express();
 const cors = require('cors');
 
 app.use(cors());
+app.use(express.json());
+
 const port = process.env.PORT || 3000;
 
 app.get('/', (req, res) => {
@@ -18,6 +20,15 @@ const users = [
 app.get('/users', (req, res) => {
   res.send(users); 
 });
+
+app.post('/users', (req, res) => {
+  const user = req.body;
+  user.id = users.length + 1;
+  users.push(user);
+  const newUser = users[users.length - 1];  
+  res.send(newUser);
+});
+
 
 app.listen(port, () => {
   console.log(`Users Server running on port ${port}`);
