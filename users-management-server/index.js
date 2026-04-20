@@ -1,101 +1,103 @@
 const express = require('express');
+const app = express();
 const cors = require('cors');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const port = process.env.PORT || 5000;
 
-const app = express();
-const port = process.env.PORT || 3000;
-
-// Middleware
 app.use(cors());
 app.use(express.json());
 
-// MongoDB Connection String (এখানে আপনার আসল URI বসাবেন)
-const uri = "mongodb+srv://<username>:<password>@cluster0.mongodb.net/?retryWrites=true&w=majority";
 
-// Create a MongoClient with a MongoClientOptions object to set the Stable API version
+const uri = ``;
+
+// mongodb+srv://<db_username>:<db_password>@cluster0.vyznij5.mongodb.net/?appName=Cluster0
+
 const client = new MongoClient(uri, {
-  serverApi: {
-    version: ServerApiVersion.v1,
-    strict: true,
-    deprecationErrors: true,
-  }
+    serverApi: {
+        version: ServerApiVersion.v1,
+        strict: true,
+        deprecationErrors: true,
+    }
 });
 
-async function run() {
-  try {
-    // Connect the client to the server
-    await client.connect();
-    
-    // Database এবং Collection সিলেক্ট করা
-    const database = client.db("myTodoDB"); // আপনার ডাটাবেসের নাম
-    const usersCollection = database.collection("users"); 
+const run = async () => {
+    try {
+        await client.connect();
 
-    // 0. READ: Get all users from Database
-    app.get('/users', async (req, res) => {
-      const cursor = usersCollection.find();
-      const result = await cursor.toArray();
-      res.send(result);
-    });
+        const db = client.db('simpleCrud');
+        const userCollection = db.collection('users');
 
-    // 1. CREATE: Add a new user
-    app.post('/users', async (req, res) => { 
-      try {
-        const newUser = req.body; 
-        const result = await usersCollection.insertOne(newUser); 
-        res.send(result); 
-      } catch (error) {
-        res.status(500).send({ message: "Error creating user", error });
-      }
-    });
+        app.get('/users', async (req, res) => {
+            const cursor = userCollection.find();
+            const result = await cursor.toArray();
+            res.send(result);
+        });
 
-    // 2. UPDATE: Modify an existing user by ID
-    app.put('/users/:id', async (req, res) => { 
-      try {
-        const id = req.params.id; 
-        const filter = { _id: new ObjectId(id) }; 
-        const updatedData = req.body; 
-        
-        const updateDoc = {
-          $set: {
-            ...updatedData 
-          },
-        };
-        
-        const result = await usersCollection.updateOne(filter, updateDoc); 
-        res.send(result);
-      } catch (error) {
-        res.status(500).send({ message: "Error updating user", error });
-      }
-    });
+        app.get('/users/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = {
+                _id: new ObjectId(id)
+            }
+            const user = await userCollection.findOne(query)
+            console.log('user id', id)
+            res.send(user);
+        })
 
-    // 3. DELETE: Remove a user by ID
-    app.delete('/users/:id', async (req, res) => { 
-      try {
-        const id = req.params.id; 
-        const query = { _id: new ObjectId(id) }; 
-        
-        const result = await usersCollection.deleteOne(query);
-        res.send(result);
-      } catch (error) {
-        res.status(500).send({ message: "Error deleting user", error });
-      }
-    });
+        app.post('/users', async (req, res) => {
+            const newUser = req.body;
+            // console.log('user to be inserted', newUser)
+            const result = await userCollection.insertOne(newUser);
 
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
-  } catch (error) {
-      console.log(error);
-  }
+            res.send(result);
+        })
+
+        app.patch('/users/:id', async(req, res) =>{
+            const id = req.params.id;
+            const filter = {
+                _id: new ObjectId(id)
+            }
+            const modifiedUser = req.body;
+
+            const updatedDocument = {
+                $set: {
+                    name: modifiedUser.name,
+                    email: modifiedUser.email,
+                    role: modifiedUser.role
+                }
+            }
+
+            const result = await userCollection.updateOne(filter, updatedDocument);
+
+            res.send(result);
+
+        })
+
+        app.delete('/users/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = {
+                _id: new ObjectId(id)
+            }
+            const result = await userCollection.deleteOne(query);
+            res.send(result);
+        })
+
+
+        await client.db('admin').command({ ping: 1 });
+        console.log("Pinged your deployment. You successfully connected to MongoDB!");
+    }
+    finally {
+        // await client.close();
+    }
 }
 
-// ফাংশনটি কল করা হচ্ছে
 run().catch(console.dir);
 
 
-// Basic test route
 app.get('/', (req, res) => {
-  res.send('Users server is running');
-});
+    res.send('Simple CRUD server is serving');
+})
 
 app.listen(port, () => {
-  console.log(`Users Server running on port ${port}`);
-});
+    console.log(` CRUD server is running on t${port}`);
+})
+
